@@ -1,0 +1,77 @@
+---
+title: "Final Analysis on Relationship Quality"
+subtitle: "Fall 2023"
+author: "sctremartinez"
+format:
+  html:
+    theme: cosmo
+    embed-resources: true
+    number-sections: true
+    toc: true
+    toc-depth: 4
+    toc-location: left
+    code-fold: false
+engine: knitr
+knitr:
+  opts_chunk: 
+    fig.align: 'center'
+    # fig.width: 6
+    # fig.height: 4
+    message: FALSE
+    cache: false
+
+---
+
+# Introduction
+
+This analysis explores the relationship quality among couples who met on vacation versus those who did not utilizing the HCMST dataset.
+
+# Data Preparation
+
+First, we load the necessary libraries and set the working directory.
+
+```{r setup, message=FALSE}
+library(sas7bdat)
+library(tidyverse)
+library(scales)
+library(viridis)
+
+setwd("/Users/smartinez/Desktop/BIOSTAT 203A/Data")
+hcmst <- read.sas7bdat("hcmst.sas7bdat")
+casesubset <- read.csv("CaseSubset.csv")
+
+# Filtering the dataset for SUBSETNUMBER 43
+my_case <- casesubset %>%
+  filter(SUBSETNUMBER == 43)
+
+# Merging datasets based on CASEID_NEW
+my_hcmst <- merge(hcmst, my_case, by = "CASEID_NEW")
+
+# Preparing data for plotting
+hc <- data.frame(prop.table(table(my_hcmst$Q31_5, my_hcmst$RELATIONSHIP_QUALITY), 1))
+
+hc <- hc %>%
+  arrange(Var1, desc(Var2)) %>%
+  group_by(Var1) %>%
+  mutate(perclabs = cumsum(Freq))
+
+hc$Var2 <- as.numeric(hc$Var2)
+
+p1 <- ggplot(hc, aes(x = Var1, y = Freq, fill = Var2)) +
+  geom_bar(stat = "identity", width = 0.7) +
+  geom_text(aes(y = perclabs, label = ifelse(perclabs > 0.95, "", percent(perclabs))), vjust = 2) +
+  scale_x_discrete(breaks = c("0", "1"), labels = c("No", "Yes")) +
+  scale_fill_gradient(name = "Relationship Quality",
+                      low = "yellow", high = "green",
+                      breaks = c(1, 2, 3, 4, 5),
+                      labels = c("Very Poor", "Poor", "Fair", "Good", "Excellent")) +
+  labs(y = "Percentage of Respondents",
+       x = "Met at Vacation",
+       title = "Relationship Quality",
+       subtitle = "Among those who met at a vacation versus those who did not") +
+  theme_minimal()
+
+p1
+
+```
+---
